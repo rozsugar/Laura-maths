@@ -440,7 +440,7 @@ let curCat=null,curDiff=null,qNum=0,score=0,streak=0,maxStreak=0,lives=3;
 let correct=0,total=0,answered=false;
 let timerInt=null,timeLeft=20,_start=Date.now();
 let coupons=[],totalEarned=0,curCoupon=null;
-const DIFF_CONFIG={facile:{qs:8,time:20,reward:0},moyen:{qs:10,time:15,reward:1},difficile:{qs:12,time:10,reward:2}};
+const DIFF_CONFIG={facile:{qs:8,time:20,reward:0},moyen:{qs:10,time:45,reward:1},difficile:{qs:12,time:60,reward:2}};
 
 const rand=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
 const pick=a=>a[rand(0,a.length-1)];
