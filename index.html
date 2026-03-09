@@ -455,6 +455,13 @@ h1 .laura{color:var(--rose);}h1 .x{color:var(--border);font-size:.5em;margin:0 6
     <img id="expl-cat" src="" alt="Arya">
     <div class="arya-tip" id="expl-tip"></div>
   </div>
+  <div id="expl-link-box" style="display:none;margin-top:12px;padding:10px 14px;background:rgba(42,120,191,.1);border:1px solid rgba(42,120,191,.3);border-radius:10px;">
+    <a id="expl-link" href="#" target="_blank" rel="noopener"
+      style="color:var(--accent);font-family:var(--mono);font-size:.72rem;text-decoration:none;display:block;">&#9654; Voir l'explication</a>
+    <div style="font-size:.6rem;color:var(--muted);margin-top:3px;font-family:var(--mono)">
+      Khan Academy / YouTube — s'ouvre dans un nouvel onglet
+    </div>
+  </div>
   <button class="expl-close" onclick="closeExpl()">Réessayer ce type →</button>
 </div>
 </div>
@@ -462,7 +469,7 @@ h1 .laura{color:var(--rose);}h1 .x{color:var(--border);font-size:.5em;margin:0 6
 <!-- PUNISHMENT -->
 <div class="pun-ol" id="pun-ol">
 <div class="pun-pop">
-  <h2>Aïe... 3 erreurs !</h2>
+  <h2>Aïe... encore une erreur !</h2>
   <div class="pun-sub">// Tu as reçu un ticket de corvée, Laura !</div>
   <div class="pun-ticket">
     <div class="pun-icon" id="pun-icon">🚽</div>
@@ -522,15 +529,15 @@ h1 .laura{color:var(--rose);}h1 .x{color:var(--border);font-size:.5em;margin:0 6
       <div class="diff-dot"></div>
       <div class="diff-info">
         <div class="diff-label">Facile</div>
-        <div class="diff-sub">8 questions · 20 sec · bases<br>Bonus : tout rapide = +0.50€</div>
+        <div class="diff-sub">8 questions · 20 sec · 100% requis<br>Bonus : tout rapide = +0.50€</div>
       </div>
-      <div class="diff-reward">0.5€</div>
+      <div class="diff-reward">0.50€</div>
     </div>
     <div class="diff-card d-moyen" onclick="startGame('moyen')">
       <div class="diff-dot"></div>
       <div class="diff-info">
         <div class="diff-label">Moyen</div>
-        <div class="diff-sub">10 questions · 30 sec · ≥100% requis<br>⚡ 3 réponses rapides = +0.50€</div>
+        <div class="diff-sub" id="dc-moyen-sub">10 questions · 30 sec · 100% requis<br>⚡ 3 réponses rapides = +0.50€<br><span style="font-size:.75em;opacity:.8">⚠️ Fonctions Difficile : 40 sec</span></div>
       </div>
       <div class="diff-reward">1€</div>
     </div>
@@ -538,7 +545,7 @@ h1 .laura{color:var(--rose);}h1 .x{color:var(--border);font-size:.5em;margin:0 6
       <div class="diff-dot"></div>
       <div class="diff-info">
         <div class="diff-label">Difficile</div>
-        <div class="diff-sub">12 questions · 30 sec · ≥100% requis<br>⚡ 3 réponses rapides = +0.50€</div>
+        <div class="diff-sub" id="dc-diff-sub">12 questions · 30 sec · 100% requis<br>⚡ 3 réponses rapides = +0.50€<br><span style="font-size:.75em;opacity:.8">⚠️ Fonctions Difficile : 40 sec</span></div>
       </div>
       <div class="diff-reward">2€</div>
     </div>
@@ -703,6 +710,13 @@ function selectCat(id){
   document.getElementById('diff-icon').textContent=curCat.icon;
   document.getElementById('diff-name').textContent=curCat.name;
   document.getElementById('diff-desc').textContent=curCat.desc;
+  // update diff card times based on category
+  const isSpecial=(id==='fn');
+  const mTime=isSpecial?'30':'30';
+  const dTime=isSpecial?'40':'30';
+  const dLabel=isSpecial?'<span style="color:var(--accent);font-weight:700">40 sec</span>':'30 sec';
+  document.getElementById('dc-moyen-sub').innerHTML='10 questions · '+mTime+' sec · 100% requis<br>⚡ 3 réponses rapides = +0.50€';
+  document.getElementById('dc-diff-sub').innerHTML='12 questions · '+dLabel+' · 100% requis<br>⚡ 3 réponses rapides = +0.50€'+(isSpecial?'<br><span style="font-size:.75em;opacity:.85">⏱ Fonctions : 40 sec</span>':'');
   show('diff');
 }
 function startGame(diff){
@@ -734,10 +748,9 @@ function updateTimer(){
 function timeUp(){
   if(answered)return;answered=true;
   document.querySelectorAll('.ch').forEach(b=>b.disabled=true);
-  if(window._cq)revealOk(window._cq);
-  if(curDiff==='facile')facileAllFast=false;
-  doWrong(window._cq,true);
-  document.getElementById('nxt-btn').classList.add('on');
+  var q=window._cq;
+  if(q)revealOk(q);
+  doWrong(q,true);
 }
 function wasAnsweredFast(){return(Date.now()-qStartTime)/1000<=DIFF_CONFIG[curDiff].time*(2/3);}
 
@@ -777,7 +790,7 @@ function genEq(){
       choices:sh([{v:xv,ok:true},...w.map(v=>({v,ok:false}))]),fmt:v=>`x = ${v}`,subtype:'eq1',
       explain:{answer:`x = ${xv}`,steps:[
         {num:'Isoler x',text:`Soustraire ${b} des deux membres.`,math:`${a}x = ${c-b}`},
-        {num:'Diviser par ${a}',text:'',math:`x = ${xv}`},
+        {num:`Diviser par ${a}`,text:'',math:`x = ${xv}`},
         {num:'Vérif',text:'',math:`${a}×${xv}+${b}=${a*xv+b} ✓`}],
         tip:'ax+b=c → x=(c−b)/a. Toujours vérifier !'}};
   }
@@ -826,7 +839,7 @@ function genFn(){
         tip:"f(a) = remplacer x par a dans la formule."}};
   }
   if(lv==='moyen'){
-    const a=rand(1,3)*(Math.random()<.5?1:-1),h=rand(-3,3),k=rand(-4,4);
+    const a=rand(1,3)*(Math.random()<.5?1:-1),h=rand(-3,3)||1,k=rand(-4,4);
     const correct=`(${h} ; ${k})`;
     const w=[`(${h+1} ; ${k})`,`(${h} ; ${k+1})`,`(${h-1} ; ${k-1})`];
     return{text:`f(x)=${a}(x ${h>=0?'−':'+'}${Math.abs(h)})²${k>=0?'+':''}${k}. Sommet ?`,math:'',
@@ -868,8 +881,14 @@ function genGe(){
         tip:'Distance = racine de la somme des carrés des différences de coordonnées.'}};
   }
   const x1=rand(-3,3),y1=rand(-3,3),m=rand(-3,3)||1;
-  const b2=y1-m*x1;const eq=`y=${m}x${b2>=0?'+':''}${b2}`;
-  const w2=[`y=${m+1}x${b2>=0?'+':''}${b2}`,`y=${m}x${b2>=0?'+':''}${b2+1}`,`y=${m-1}x${b2>=0?'+':''}${b2}`];
+  const b2=y1-m*x1;const fmtCoef=(v,base)=>v===1?base:v===-1?'-'+base:`${v}${base}`;
+  const fmtConst=(v)=>v===0?'':v>0?`+${v}`:`${v}`;
+  const eq=`y=${fmtCoef(m,'x')}${fmtConst(b2)}`;
+  const w2=[
+    `y=${fmtCoef(m+1,'x')}${fmtConst(b2)}`,
+    `y=${fmtCoef(m,'x')}${fmtConst(b2+1)}`,
+    `y=${fmtCoef(m-1,'x')}${fmtConst(b2)}`
+  ];
   return{text:`Droite passant par A(${x1};${y1}), pente m=${m}. Équation ?`,math:'',
     choices:sh([{v:eq,ok:true},...w2.map(v=>({v,ok:false}))]),fmt:v=>v,subtype:'droite',
     explain:{answer:eq,steps:[
@@ -887,7 +906,7 @@ function genSt(){
     return{text:'Calcule la moyenne.',math:vals.join(' ; '),
       choices:sh([{v:mean,ok:true},...w.map(v=>({v,ok:false}))]),fmt:v=>`Moy = ${v}`,subtype:'mean',
       explain:{answer:`Moyenne = ${mean}`,steps:[
-        {num:'Somme÷effectif',text:'',math:`(${vals.join('+')}}) ÷ ${n} = ${mean}`}],
+        {num:'Somme÷effectif',text:'',math:`(${vals.join(' + ')}) ÷ ${n} = ${mean}`}],
         tip:'Moyenne = total ÷ nombre de valeurs.'}};
   }
   if(lv==='moyen'){
@@ -965,7 +984,8 @@ function renderQ(q,isRetry=false){
     b.innerHTML=q.fmt(ch.v);b.onclick=()=>pickAns(ch.ok,b,q);g.appendChild(b);
   });
   updateRetryBar(q.subtype);
-  startTimer(cfg.time);
+  var catTime=(curCat&&curCat.id==="fn"&&curDiff==="difficile")?40:cfg.time;
+  startTimer(catTime);
 }
 
 function pickAns(ok,btn,q){
@@ -1036,7 +1056,6 @@ function doWrong(q,timeout=false){
   streak=0;document.getElementById('s-streak').textContent=0;
   lives--;document.getElementById('s-lives').textContent=['❤❤❤','❤❤','❤','💀'][3-Math.max(0,lives)];
   if(curDiff==='facile')facileAllFast=false;
-  // consecutive wrong penalty
   consecutiveWrong++;
   if(consecutiveWrong>=2&&totalEarned>0){
     totalEarned=Math.max(0,+(totalEarned-0.5).toFixed(2));
@@ -1044,39 +1063,65 @@ function doWrong(q,timeout=false){
     showDeductNotice();
     consecutiveWrong=0;
   }
-  if(timeout){
-    const fb=document.getElementById('fb');fb.className='fb bad on';fb.textContent='⏰ Temps écoulé !';
-    document.getElementById('nxt-btn').classList.add('on');
-    if(lives<=0)setTimeout(endGame,1400);
-    return;
-  }
-  const cnt=q?incWC(q.subtype):0;
-  if(cnt>=2)showPunishment(cnt);
-  else showExpl(q,cnt);
+  const cnt=q?incWrongCount(q.subtype):0;
+  showExpl(q,cnt,timeout,cnt>=2?cnt:0);
 }
 
-function showExpl(q,wrongCnt){
+const EXPL_LINKS={
+  eq1:{label:'Équation 1er degré — Khan Academy 🇫🇷',url:'https://fr.khanacademy.org/math/3eme-annee-secondaire/xd903d14ae2b1276e:algebre/xd903d14ae2b1276e:equations-ou-linconnue-est-dans-les-deux-membres/e/variables-on-both-sides-rational'},
+  eq2:{label:'Discriminant 2nd degré — Khan Academy 🇫🇷',url:'https://fr.khanacademy.org/math/fr-v2-premiere-s/x67ebdaa4f3e116cf:algebre-equations-du-second-degre/x67ebdaa4f3e116cf:fr-v2-rsoudre-une-quation-du-second-degr-en-utilisant-la-formule/a/discriminant-review'},
+  syst:{label:'Systèmes d\'équations — Khan Academy 🇫🇷',url:'https://fr.khanacademy.org/math/fr-v2-seconde-s/x16338c0e47eff42b:geometrie-droites-et-systemes-d-equations/x16338c0e47eff42b:resolution-d-un-systeme-par-addition-ou-combinaison/v/solving-systems-of-equations-by-elimination'},
+  sys:{label:'Systèmes d\'équations — Khan Academy 🇫🇷',url:'https://fr.khanacademy.org/math/fr-v2-seconde-s/x16338c0e47eff42b:geometrie-droites-et-systemes-d-equations/x16338c0e47eff42b:resolution-d-un-systeme-par-addition-ou-combinaison/v/solving-systems-of-equations-by-elimination'},
+  fimg:{label:'Fonctions affines — Khan Academy 🇫🇷',url:'https://fr.khanacademy.org/math/fr-v2-seconde-s/x16338c0e47eff42b:fonctions-les-fonctions-affines'},
+  fsom:{label:'Sommet de parabole — YouTube 🇫🇷',url:'https://www.youtube.com/results?search_query=sommet+parabole+forme+canonique+seconde+cours'},
+  fvar:{label:'Sens de variation affine — Khan Academy 🇫🇷',url:'https://fr.khanacademy.org/math/fr-v2-seconde-s/x16338c0e47eff42b:fonctions-les-fonctions-affines'},
+  vec:{label:'Les vecteurs — Khan Academy 🇫🇷',url:'https://fr.khanacademy.org/math/fr-v2-seconde-s/x16338c0e47eff42b:geometrie-les-vecteurs'},
+  dist:{label:'Distance & repère — Khan Academy 🇫🇷',url:'https://fr.khanacademy.org/math/fr-v2-seconde-s/x16338c0e47eff42b:geometrie-droites-dans-le-plan-repere/x16338c0e47eff42b:etablir-l-equation-reduite-d-une-droite/v/linear-equations-in-slope-intercept-form'},
+  droite:{label:'Équation réduite d\'une droite — Khan Academy 🇫🇷',url:'https://fr.khanacademy.org/math/fr-v2-seconde-s/x16338c0e47eff42b:geometrie-droites-dans-le-plan-repere/x16338c0e47eff42b:etablir-l-equation-reduite-d-une-droite/v/linear-equations-in-slope-intercept-form'},
+  mean:{label:'Paramètres statistiques — Khan Academy 🇫🇷',url:'https://fr.khanacademy.org/math/fr-v2-seconde-s/x16338c0e47eff42b:statistiques-et-probabilites-parametres-d-une-serie-statistique'},
+  med:{label:'Paramètres statistiques — Khan Academy 🇫🇷',url:'https://fr.khanacademy.org/math/fr-v2-seconde-s/x16338c0e47eff42b:statistiques-et-probabilites-parametres-d-une-serie-statistique'},
+  proba:{label:'Probabilités — Khan Academy 🇫🇷',url:'https://fr.khanacademy.org/math/fr-v2-seconde-s/x16338c0e47eff42b:statistiques-et-probabilites-probabilites'},
+  dev:{label:'Identités remarquables — Khan Academy 🇫🇷',url:'https://fr.khanacademy.org/math/3eme-annee-secondaire/xd903d14ae2b1276e:algebre-factorisation-de-polynomes-et-fractions-rationnelles/xd903d14ae2b1276e:factorisation-grace-aux-identites-remarquables/v/perfect-square-factorization-intro'},
+  ir:{label:'Identités remarquables — Khan Academy 🇫🇷',url:'https://fr.khanacademy.org/math/3eme-annee-secondaire/xd903d14ae2b1276e:algebre-factorisation-de-polynomes-et-fractions-rationnelles/xd903d14ae2b1276e:factorisation-grace-aux-identites-remarquables/v/perfect-square-factorization-intro'},
+  fact:{label:'Factorisation — Khan Academy 🇫🇷',url:'https://fr.khanacademy.org/math/3eme-annee-secondaire/xd903d14ae2b1276e:algebre-factorisation-de-polynomes-et-fractions-rationnelles/xd903d14ae2b1276e:factorisation-grace-aux-identites-remarquables/v/perfect-square-factorization-intro'},
+  sqrt:{label:'Racines carrées — YouTube 🇫🇷',url:'https://www.youtube.com/results?search_query=simplifier+racine+carree+cours+seconde+maths'},
+};
+function showExpl(q,wrongCnt,isTimeout,punCnt){
+  window._pendingPun=punCnt||0;
   if(!q){document.getElementById('nxt-btn').classList.add('on');return;}
-  const e=q.explain;
-  document.getElementById('expl-sub').textContent=`// ${curCat?curCat.name:'?'} · ${curDiff} · ${wrongCnt} erreur(s)`;
+  var e=q.explain;
+  var tl=isTimeout?' <span style="color:#e05555;font-size:.7em">[temps ecoule]</span>':'';
+  document.getElementById('expl-sub').innerHTML=(curCat?curCat.name:'?')+' · '+curDiff+' · '+wrongCnt+' erreur(s)'+tl;
   document.getElementById('expl-answer').innerHTML=e.answer;
-  document.getElementById('expl-steps').innerHTML=e.steps.map(s=>`
-    <div class="expl-step">
-      <div class="step-num">${s.num}</div>
-      <div class="step-text">${s.text}</div>
-      ${s.math?`<div class="step-math">${s.math}</div>`:''}
-    </div>`).join('');
+  document.getElementById('expl-steps').innerHTML=e.steps.map(function(step){
+    return '<div class="expl-step"><div class="step-num">'+step.num+'</div>'
+      +'<div class="step-text">'+step.text+'</div>'
+      +(step.math?'<div class="step-math">'+step.math+'</div>':'')
+      +'</div>';
+  }).join('');
   document.getElementById('expl-cat').src=pick(ARYA_IMGS);
   document.getElementById('expl-tip').textContent='💡 Astuce : '+e.tip;
+  var linkData=EXPL_LINKS[q.subtype];
+  var lb=document.getElementById('expl-link-box');
+  if(linkData){
+    document.getElementById('expl-link').href=linkData.url;
+    document.getElementById('expl-link').textContent='▶ '+linkData.label;
+    lb.style.display='block';
+  } else lb.style.display='none';
   _retryQ=q;
   document.getElementById('expl-ol').classList.add('show');
 }
 function closeExpl(){
   document.getElementById('expl-ol').classList.remove('show');
   if(lives<=0){endGame();return;}
+  if(window._pendingPun>=2){
+    window._pendingPun=0;
+    showPunishment(2);
+    return;
+  }
   if(_retryQ){
-    let fq=GENS[curCat.id]();let tries=0;
-    while(fq.subtype!==_retryQ.subtype&&tries<6){fq=GENS[curCat.id]();tries++;}
+    let fq=GENS[curCat.id]();let t=0;
+    while(fq.subtype!==_retryQ.subtype&&t<6){fq=GENS[curCat.id]();t++;}
     renderQ(fq,true);
   } else document.getElementById('nxt-btn').classList.add('on');
 }
@@ -1102,13 +1147,13 @@ function closePunishment(){
   if(lives<=0){endGame();return;}
   document.getElementById('nxt-btn').classList.add('on');
 }
-
 function nextQ(){
   document.getElementById('arya-ol').classList.remove('show');
   if(lives<=0){endGame();return;}
   const cfg=DIFF_CONFIG[curDiff];
   if(qNum>=cfg.qs){endGame();return;}
-  qNum++;renderQ(GENS[curCat.id]());
+  qNum++;
+  renderQ(GENS[curCat.id]());
 }
 
 function endGame(){
@@ -1125,7 +1170,7 @@ function endGame(){
   const el=Math.floor((Date.now()-_start)/1000);
   const mm=String(Math.floor(el/60)).padStart(2,'0'),ss=String(el%60).padStart(2,'0');
   document.getElementById('res-img').src=pick(ARYA_IMGS);
-  document.getElementById('res-title').textContent=passed?(reward>0?'Récompense débloquée ! 🎀':'Bien joué ! ✓'):'Pas encore... 💪';
+  document.getElementById('res-title').textContent=passed?(reward>0?'Robux débloqués ! 💎':'Bien joué ! ✓'):'Pas encore... 💪';
   document.getElementById('res-score').textContent=totalScore+' pts';
   document.getElementById('rs-ok').textContent=`${correct}/${cfg.qs} (${Math.round(ratio*100)}%)`;
   document.getElementById('rs-time').textContent=`${mm}:${ss}`;
@@ -1136,13 +1181,13 @@ function endGame(){
   else document.getElementById('res-note').textContent='';
   if(totalReward>0){
     totalEarned=+(totalEarned+reward).toFixed(2);
-    const code='LR-'+curCat.id.toUpperCase()+'-'+Math.random().toString(36).slice(2,4).toUpperCase();
+    const code='LA-'+curCat.id.toUpperCase()+'-'+Math.random().toString(36).slice(2,4).toUpperCase();
     curCoupon={amount:totalReward,code,cat:curCat.name,diff:curDiff};
     if(reward>0)coupons.push(curCoupon);
     updateWalletUI();
     document.getElementById('cpn-amt').textContent=`${totalReward}€`;
     document.getElementById('cpn-cat').src=pick(ARYA_IMGS);
-    document.getElementById('cpn-code').textContent=`CODE : ${code}`;
+    document.getElementById('cpn-code').textContent=`CODE:${code}`;
     document.getElementById('res-coupon').style.display='block';
     document.getElementById('print-btn').style.display='inline-block';
   } else {
@@ -1152,25 +1197,6 @@ function endGame(){
   show('result');
 }
 
-function showDeductNotice(){
-  document.getElementById('deduct-balance').textContent='Solde restant : '+totalEarned.toFixed(2)+'€';
-  document.getElementById('deduct-ol').classList.add('show');
-}
-// WALLET
-function updateWalletUI(){
-  const t=totalEarned.toFixed(2);
-  document.getElementById('wallet-txt').textContent=`${t}€`;
-  document.getElementById('w-total').textContent=`${t}€`;
-  const pct=Math.min(totalEarned/5*100,100);
-  document.getElementById('w-prog-fill').style.width=pct+'%';
-  document.getElementById('w-prog-label').textContent=totalEarned>=5?'✨ 5€ atteints ! Coupon disponible !':
-    `${t}€ / 5€ — encore ${(5-totalEarned).toFixed(2)}€`;
-  const btn=document.getElementById('w-coupon-btn');
-  btn.disabled=totalEarned<5;
-  document.getElementById('w-history').innerHTML=coupons.slice(-6).reverse().map(c=>
-    `<div class="w-hist-item"><span>${c.type==='speed'?'⚡ Vitesse':c.type==='fast'?'🚀 Facile rapide':c.cat+' ('+c.diff+')'}</span><span style="color:var(--gold)">+${c.amount}€</span></div>`
-  ).join('')||'<div style="font-family:var(--mono);font-size:.63rem;color:var(--muted);padding:8px 0">Aucun coupon encore</div>';
-}
 function openWallet(){updateWalletUI();document.getElementById('wallet-modal-ol').classList.add('show');}
 function closeWallet(){document.getElementById('wallet-modal-ol').classList.remove('show');}
 function useCoupon(){
