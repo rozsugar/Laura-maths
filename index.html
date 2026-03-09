@@ -286,7 +286,8 @@ h1 .laura{color:var(--rose);}h1 .x{color:var(--border);font-size:.5em;margin:0 6
 .arya-ol.show{display:flex;}
 .arya-pop{background:var(--card);border:1.5px solid var(--border);border-radius:20px;
   padding:22px 24px;max-width:360px;width:100%;text-align:center;
-  box-shadow:0 10px 36px rgba(22,40,64,.18);animation:popUp .4s cubic-bezier(.34,1.56,.64,1);}
+  box-shadow:0 10px 36px rgba(22,40,64,.18);animation:popUp .4s cubic-bezier(.34,1.56,.64,1);
+  max-height:88vh;overflow-y:auto;}
 .arya-pop img{width:100%;max-width:210px;border-radius:12px;margin-bottom:10px;
   border:2px solid var(--rose);}
 .arya-quote{font-family:var(--serif);font-style:italic;font-size:.92rem;color:var(--ink);
@@ -902,7 +903,7 @@ function genSt(){
   if(lv==='facile'){
     const n=rand(4,6);const vals=Array.from({length:n},()=>rand(4,18));
     const sum=vals.reduce((a,b)=>a+b,0);const mean=Math.round(sum/n*10)/10;
-    const w=[+(mean+.5).toFixed(1),+(mean-.5).toFixed(1),+(mean+1).toFixed(1)].filter(v=>v!==mean).slice(0,3);
+    const w=[+(mean+.5).toFixed(1),+(mean-.5).toFixed(1),+(mean+1).toFixed(1)].filter(v=>+(v).toFixed(1)!==+(mean).toFixed(1)).slice(0,3);
     return{text:'Calcule la moyenne.',math:vals.join(' ; '),
       choices:sh([{v:mean,ok:true},...w.map(v=>({v,ok:false}))]),fmt:v=>`Moy = ${v}`,subtype:'mean',
       explain:{answer:`Moyenne = ${mean}`,steps:[
@@ -911,13 +912,16 @@ function genSt(){
   }
   if(lv==='moyen'){
     const n=rand(5,7);const vals=Array.from({length:n},()=>rand(1,20)).sort((a,b)=>a-b);
-    const med=vals[Math.floor(n/2)];
-    const w=[med+1,med-1,med+2].filter(v=>v!==med).slice(0,3);
+    const isEven=(n%2===0);
+    const med=isEven?(vals[n/2-1]+vals[n/2])/2:vals[Math.floor(n/2)];
+    const medStr=isEven?`(${vals[n/2-1]}+${vals[n/2]})/2`:String(vals[Math.floor(n/2)]);
+    const w=[+(med+1).toFixed(1),+(med-1).toFixed(1),+(med+0.5).toFixed(1)].filter(v=>+(v).toFixed(1)!==+(med).toFixed(1)).slice(0,3);
     return{text:'Médiane (série triée).',math:vals.join(' < '),
       choices:sh([{v:med,ok:true},...w.map(v=>({v,ok:false}))]),fmt:v=>`Médiane = ${v}`,subtype:'med',
       explain:{answer:`Médiane = ${med}`,steps:[
-        {num:'Rang central',text:`${n} valeurs → rang ${Math.floor(n/2)+1}`,math:`Médiane = ${med}`}],
-        tip:'Médiane = valeur du milieu (série triée). Si pair : moyenne des deux centraux.'}};
+        {num:'Nb de valeurs',text:isEven?`${n} valeurs (pair) → moyenne des 2 centraux`:`${n} valeurs (impair) → valeur centrale`,
+          math:isEven?`(${vals[n/2-1]} + ${vals[n/2]}) ÷ 2 = ${med}`:`rang ${Math.floor(n/2)+1} = ${med}`}],
+        tip:'Si nb impair : valeur du milieu. Si nb pair : moyenne des 2 valeurs centrales.'}};
   }
   const total=rand(20,40),groupA=rand(8,total-8);
   const favA=rand(1,groupA-1),favB=rand(1,total-groupA-1);
@@ -1033,7 +1037,7 @@ function showArya(pts,fast){
 function closeArya(){
   document.getElementById('arya-ol').classList.remove('show');
   if(window._pendingBonus){window._pendingBonus=false;showBonusCard();return;}
-  document.getElementById('nxt-btn').classList.add('on');
+  nextQ();
 }
 
 function showBonusCard(){
