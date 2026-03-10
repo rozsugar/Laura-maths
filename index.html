@@ -784,119 +784,355 @@ const CATS=[
 function genEq(){
   const lv=curDiff;
   if(lv==='facile'){
-    const a=rand(2,6),b=rand(-8,8),c=rand(-10,10);
+    const sub=pick(['eq1','eq1b','ineq1']);
+    if(sub==='eq1'){
+      const a=rand(2,8),b=rand(-6,6),c=rand(-10,10);
+      const xn=c-b;if(xn%a!==0)return genEq();const xv=xn/a;
+      const w=[xv+1,xv-1,xv+2].filter(v=>v!==xv).slice(0,3);
+      return{text:"Résous l'équation.",math:`${a}x ${b>=0?'+ ':''}${b} = ${c}`,
+        choices:sh([{v:xv,ok:true},...w.map(v=>({v,ok:false}))]),fmt:v=>`x = ${v}`,subtype:'eq1',
+        explain:{answer:`x = ${xv}`,steps:[
+          {num:'Isoler x',text:`${b>=0?'Soustraire':'Ajouter'} ${Math.abs(b)} de chaque côté`,math:`${a}x = ${c-b}`},
+          {num:'Diviser par '+a,text:'',math:`x = ${xv}`}],
+          tip:'ax+b=c → x=(c−b)/a'}};
+    }
+    if(sub==='eq1b'){
+      const a=rand(2,5),b=rand(1,6),c=rand(1,5),d=rand(1,8);
+      // a(x+b) = c(x+d) → ax+ab = cx+cd → (a-c)x = cd-ab
+      if(a===c)return genEq();
+      const xnum=c*d-a*b,xden=a-c;
+      if(xnum%xden!==0)return genEq();
+      const xv=xnum/xden;
+      const w=[xv+1,xv-1,xv+2].filter(v=>v!==xv).slice(0,3);
+      return{text:"Résous (développe d'abord).",math:`${a}(x + ${b}) = ${c}(x + ${d})`,
+        choices:sh([{v:xv,ok:true},...w.map(v=>({v,ok:false}))]),fmt:v=>`x = ${v}`,subtype:'eq1b',
+        explain:{answer:`x = ${xv}`,steps:[
+          {num:'Développer',text:'',math:`${a}x + ${a*b} = ${c}x + ${c*d}`},
+          {num:'Regrouper',text:'',math:`${a-c}x = ${c*d-a*b}`},
+          {num:'Diviser',text:'',math:`x = ${xv}`}],
+          tip:'Développe les deux membres avant de regrouper les x.'}};
+    }
+    // ineq1
+    const a=rand(2,6),b=rand(-5,5),c=rand(-8,8);
     const xn=c-b;if(xn%a!==0)return genEq();const xv=xn/a;
-    const w=[xv+1,xv-1,xv+2,xv-2].filter(v=>v!==xv).slice(0,3);
-    return{text:"Résous l'équation.",math:`${a}x ${b>=0?'+ ':''}${b} = ${c}`,
-      choices:sh([{v:xv,ok:true},...w.map(v=>({v,ok:false}))]),fmt:v=>`x = ${v}`,subtype:'eq1',
-      explain:{answer:`x = ${xv}`,steps:[
-        {num:'Isoler x',text:`Soustraire ${b} des deux membres.`,math:`${a}x = ${c-b}`},
-        {num:`Diviser par ${a}`,text:'',math:`x = ${xv}`},
-        {num:'Vérif',text:'',math:`${a}×${xv}+${b}=${a*xv+b} ✓`}],
-        tip:'ax+b=c → x=(c−b)/a. Toujours vérifier !'}};
+    const sgn=pick(['<','>','≤','≥']);const flip=(sgn==='<'||sgn==='≤')?'>':'<';
+    const ans=`x ${sgn} ${xv}`;
+    const w=[`x ${sgn} ${xv+1}`,`x ${flip} ${xv}`,`x ${sgn} ${xv-1}`];
+    return{text:"Résous l'inéquation.",math:`${a}x ${b>=0?'+ ':''}${b} ${sgn} ${c}`,
+      choices:sh([{v:ans,ok:true},...w.map(v=>({v,ok:false}))]),fmt:v=>v,subtype:'ineq1',
+      explain:{answer:ans,steps:[
+        {num:'Isoler x',text:'Même principe qu\'équation',math:`${a}x ${sgn} ${c-b}`},
+        {num:'Diviser (a>0)',text:'Signe conservé si diviseur > 0',math:`x ${sgn} ${xv}`}],
+        tip:'Si on divise par un négatif, le signe de l\'inégalité se retourne !'}};
   }
   if(lv==='moyen'){
-    const a=rand(1,3),b=rand(-4,4),c=rand(-5,5);
-    const delta=b*b-4*a*c;if(delta<0)return genEq();
-    const sqD=Math.round(Math.sqrt(delta));if(sqD*sqD!==delta)return genEq();
-    const x1=(-b+sqD)/(2*a),x2=(-b-sqD)/(2*a);
-    if(!Number.isInteger(x1)||!Number.isInteger(x2)||x1===x2)return genEq();
-    const sol=`x=${Math.min(x1,x2)} et x=${Math.max(x1,x2)}`;
-    const w=[`x=${x1} et x=${x2+1}`,`x=${x1+1} et x=${x2}`,`x=${x1-1} et x=${x2}`];
-    return{text:"Résous avec le discriminant.",math:`${a}x² ${b>=0?'+ ':''}${b}x ${c>=0?'+ ':''}${c} = 0`,
-      choices:sh([{v:sol,ok:true},...w.map(v=>({v,ok:false}))]),fmt:v=>v,subtype:'eq2',
-      explain:{answer:sol,steps:[
-        {num:'Δ = b²−4ac',text:'',math:`${b}²−4×${a}×${c} = ${delta}`},
-        {num:'Solutions',text:'x=(−b±√Δ)/2a',math:`x₁=${x1}, x₂=${x2}`}],
-        tip:'Δ>0 : 2 solutions. Δ=0 : 1 solution. Δ<0 : aucune solution réelle.'}};
+    const sub=pick(['eq2','eq_frac','eq1c']);
+    if(sub==='eq2'){
+      const p=rand(-5,5),q=rand(-5,5);
+      const a=1,b=-(p+q),c=p*q;
+      const bstr=b===0?'':b>0?` + ${b}x`:` - ${Math.abs(b)}x`;
+      const cstr=c===0?'':c>0?` + ${c}`:` - ${Math.abs(c)}`;
+      const disc=b*b-4*c;
+      if(disc<0)return genEq();
+      const choices_arr=disc===0?[{v:`x = ${p}`,ok:true},{v:`x = ${p+1}`,ok:false},{v:`x = ${p-1}`,ok:false}]:
+        [{v:`x = ${p} ou x = ${q}`,ok:true},{v:`x = ${-p} ou x = ${-q}`,ok:false},{v:`x = ${p} ou x = ${-q}`,ok:false}];
+      return{text:'Résous par discriminant.',math:`x²${bstr}${cstr} = 0`,
+        choices:sh(choices_arr),fmt:v=>v,subtype:'eq2',
+        explain:{answer:disc===0?`x = ${p}`:`x = ${p} ou x = ${q}`,steps:[
+          {num:'Discriminant',text:'Δ = b²−4ac',math:`Δ = ${b}²−4×${c} = ${disc}`},
+          {num:'Solutions',text:disc===0?'Δ=0 → 1 solution':'Δ>0 → 2 solutions',
+            math:disc===0?`x = ${-b}/2 = ${p}`:`x₁ = ${p}, x₂ = ${q}`}],
+          tip:'Δ<0 : pas de solution réelle. Δ=0 : une solution. Δ>0 : deux solutions.'}};
+    }
+    if(sub==='eq_frac'){
+      const a=rand(2,5),b=rand(1,4),c=rand(2,5),d=rand(1,4);
+      // a/x = c/d → x = a*d/c (si c|a*d)
+      if((a*d)%c!==0)return genEq();
+      const xv=a*d/c;
+      const w=[xv+1,xv-1,xv+2].filter(v=>v>0&&v!==xv).slice(0,3);
+      return{text:'Résous (produit en croix).',math:`${a}/x = ${c}/${d}`,
+        choices:sh([{v:xv,ok:true},...w.map(v=>({v,ok:false}))]),fmt:v=>`x = ${v}`,subtype:'eq_frac',
+        explain:{answer:`x = ${xv}`,steps:[
+          {num:'Produit en croix',text:'',math:`${a}×${d} = ${c}×x`},
+          {num:'Résoudre',text:'',math:`x = ${a*d}/${c} = ${xv}`}],
+          tip:'a/b = c/d ⟺ ad = bc (produit en croix)'}};
+    }
+    // eq1c: équation avec terme au carré simple: x² = n
+    const n=rand(1,8);const xv=n*n;
+    const w=[xv+1,xv-1,(n+1)*(n+1)].filter(v=>v!==xv).slice(0,3);
+    return{text:`Résous x² = ${xv}`,math:'',
+      choices:sh([{v:`x = ±${n}`,ok:true},...[`x = ${n}`,`x = ±${n+1}`,`x = ±${n-1}`].filter(v=>v!==`x = ±${n}`).slice(0,3).map(v=>({v,ok:false}))]),
+      fmt:v=>v,subtype:'eq1c',
+      explain:{answer:`x = ±${n}`,steps:[
+        {num:'Racine carrée',text:'x²=a → x=±√a',math:`x = ±√${xv} = ±${n}`}],
+        tip:'N\'oublie pas le ±  : deux solutions !'}};
   }
-  // difficile: système 2x2
-  const a1=rand(1,3),b1=rand(1,3),c1=rand(-8,8);
-  const a2=rand(1,3),b2=rand(1,3),c2=rand(-8,8);
-  const det=a1*b2-a2*b1;if(det===0)return genEq();
-  const xv2=(c1*b2-c2*b1)/det,yv=(a1*c2-a2*c1)/det;
-  if(!Number.isInteger(xv2)||!Number.isInteger(yv))return genEq();
-  const sol2=`x=${xv2}, y=${yv}`;
-  const w2=[`x=${xv2+1}, y=${yv}`,`x=${xv2}, y=${yv+1}`,`x=${xv2-1}, y=${yv-1}`];
-  return{text:'Résous le système.',math:`${a1}x+${b1}y=${c1}\n${a2}x+${b2}y=${c2}`,
-    choices:sh([{v:sol2,ok:true},...w2.map(v=>({v,ok:false}))]),fmt:v=>v,subtype:'syst',
-    explain:{answer:sol2,steps:[
-      {num:'Combinaison',text:`Éliminer y : (L1)×${b2}−(L2)×${b1}`,math:`det=${det}`},
-      {num:'x',text:'',math:`x=(${c1}×${b2}−${c2}×${b1})/${det}=${xv2}`},
-      {num:'y',text:`Substitue x=${xv2} dans L1`,math:`y=${yv}`}],
-      tip:'Méthode du pivot : multiplier les lignes pour éliminer une inconnue.'}};
+  // difficile: système 2×2
+  const a1=rand(1,4),b1=rand(-3,3),a2=rand(1,4),b2=rand(-3,3);
+  if(a1*b2===a2*b1)return genEq();
+  const xv=rand(-4,4),yv=rand(-4,4);
+  const c1=a1*xv+b1*yv,c2=a2*xv+b2*yv;
+  const b1str=b1===0?'':(b1>0?` + ${b1}y`:` - ${Math.abs(b1)}y`);
+  const b2str=b2===0?'':(b2>0?` + ${b2}y`:` - ${Math.abs(b2)}y`);
+  return{text:'Résous le système.',
+    math:`${a1}x${b1str} = ${c1}\n${a2}x${b2str} = ${c2}`,
+    choices:sh([{v:`x=${xv}, y=${yv}`,ok:true},
+      {v:`x=${xv+1}, y=${yv}`,ok:false},{v:`x=${xv}, y=${yv+1}`,ok:false},{v:`x=${-xv}, y=${-yv}`,ok:false}]),
+    fmt:v=>v,subtype:'syst',
+    explain:{answer:`x=${xv}, y=${yv}`,steps:[
+      {num:'Substitution ou combinaison',text:'',math:`x=${xv}, y=${yv}`},
+      {num:'Vérif',text:'',math:`${a1}×${xv}${b1>=0?'+':''}${b1}×${yv}=${c1} ✓`}],
+      tip:'Méthode : substitution (isoler une variable) ou combinaison (éliminer une variable).'}};
 }
+
 
 function genFn(){
   const lv=curDiff;
+  const catTime=(curCat&&curCat.id==='fn'&&lv==='difficile')?40:null; // handled in renderQ
+
   if(lv==='facile'){
-    const a=rand(-4,4)||1,b=rand(-5,5),val=rand(-3,3);
-    const res=a*val+b;
-    const w=[res+1,res-1,res+2,res-2].filter(v=>v!==res).slice(0,3);
-    return{text:`f(x) = ${a}x ${b>=0?'+ ':''}${b}. Calcule f(${val}).`,math:'',
-      choices:sh([{v:res,ok:true},...w.map(v=>({v,ok:false}))]),fmt:v=>`f(${val}) = ${v}`,subtype:'fimg',
-      explain:{answer:`f(${val}) = ${res}`,steps:[
-        {num:'Substitution',text:`Remplace x par ${val}.`,math:`${a}×${val}+${b}=${res}`}],
-        tip:"f(a) = remplacer x par a dans la formule."}};
+    const sub=pick(['fimg','fimg2','sign']);
+    if(sub==='fimg'||sub==='fimg2'){
+      const a=rand(-4,4)||1,b=rand(-6,6);
+      const x=rand(-5,5);const r=a*x+b;
+      const w=[r+1,r-1,r+2].filter(v=>v!==r).slice(0,3);
+      const label=sub==='fimg2'?`g(x) = ${a===1?'':a===-1?'-':''+a}x² ${b>=0?'+ ':''}${b}`:`f(x) = ${a===1?'':a===-1?'-':''+a}x ${b>=0?'+ ':''}${b}`;
+      const rv=sub==='fimg2'?a*x*x+b:r;
+      const wv=sub==='fimg2'?[rv+2,rv-2,rv+5].filter(v=>v!==rv).slice(0,3):[r+1,r-1,r+2].filter(v=>v!==r).slice(0,3);
+      return{text:`Calcule la valeur de l'image de x = ${x}.`,math:sub==='fimg2'?`g(x) = ${a===1?'':a}x² ${b>=0?'+ ':'- '}${Math.abs(b)}`:`f(x) = ${a===1?'':a===-1?'-':a}x ${b>=0?'+ ':'- '}${Math.abs(b)}`,
+        choices:sh([{v:rv,ok:true},...wv.map(v=>({v,ok:false}))]),fmt:v=>`f(${x}) = ${v}`,subtype:'fimg',
+        explain:{answer:`f(${x}) = ${rv}`,steps:[
+          {num:'Substituer',text:`Remplace x par ${x}`,math:`f(${x}) = ${a}×${x} ${b>=0?'+ ':''}${b} = ${rv}`}],
+          tip:'Image = valeur de f(x) pour un x donné. Remplace simplement x dans la formule.'}};
+    }
+    // sign: signe d'une fonction affine
+    const a=rand(-3,3)||1,b=rand(-6,6);
+    const zero=(-b/a);
+    const pos=(a>0)?`x > ${zero}`:`x < ${zero}`;
+    const neg=(a>0)?`x < ${zero}`:`x > ${zero}`;
+    const correct=`f(x) > 0 si ${pos}`;
+    const w=[`f(x) > 0 si ${neg}`,`f(x) > 0 si x > ${zero+1}`,`f(x) > 0 si x < ${zero}`].filter(v=>v!==correct).slice(0,3);
+    return{text:'f(x) = ax+b. Quand f(x) > 0 ?',math:`f(x) = ${a===1?'':a===-1?'-':a}x ${b>=0?'+ ':'- '}${Math.abs(b)}`,
+      choices:sh([{v:correct,ok:true},...w.map(v=>({v,ok:false}))]),fmt:v=>v,subtype:'sign',
+      explain:{answer:correct,steps:[
+        {num:'Zero',text:'f(x)=0 quand ax+b=0',math:`x = ${-b}/${a} = ${zero}`},
+        {num:'Signe',text:a>0?'a>0 : f croissante':'a<0 : f décroissante',math:correct}],
+        tip:a>0?'Fonction croissante : positive après le zéro.':'Fonction décroissante : positive avant le zéro.'}};
   }
+
   if(lv==='moyen'){
-    const a=rand(1,3)*(Math.random()<.5?1:-1),h=rand(-3,3)||1,k=rand(-4,4);
-    const correct=`(${h} ; ${k})`;
-    const w=[`(${h+1} ; ${k})`,`(${h} ; ${k+1})`,`(${h-1} ; ${k-1})`];
-    return{text:`f(x)=${a}(x ${h>=0?'−':'+'}${Math.abs(h)})²${k>=0?'+':''}${k}. Sommet ?`,math:'',
-      choices:sh([{v:correct,ok:true},...w.map(v=>({v,ok:false}))]),fmt:v=>v,subtype:'fsom',
-      explain:{answer:`Sommet S${correct}`,steps:[
-        {num:'Forme canonique',text:'f(x)=a(x−h)²+k → sommet (h;k)',math:`h=${h}, k=${k}`}],
-        tip:'a(x−h)²+k : sommet = (h,k). a>0 : minimum. a<0 : maximum.'}};
+    const sub=pick(['fsom','fvar','inter']);
+    if(sub==='fsom'){
+      const a=rand(-3,3)||1,h=rand(-3,3)||1,k=rand(-5,5);
+      const correct=`(${h} ; ${k})`;
+      const w=[`(${h+1} ; ${k})`,`(${-h} ; ${k})`,`(${h} ; ${k+1})`].filter(v=>v!==correct).slice(0,3);
+      return{text:'Trouve le sommet de la parabole.',math:`f(x) = ${a===1?'':a===-1?'-':a}(x ${h>=0?'− ':'+ '}${Math.abs(h)})² ${k>=0?'+ ':'- '}${Math.abs(k)}`,
+        choices:sh([{v:correct,ok:true},...w.map(v=>({v,ok:false}))]),fmt:v=>`S${v}`,subtype:'fsom',
+        explain:{answer:`S(${h} ; ${k})`,steps:[
+          {num:'Forme canonique',text:'f(x) = a(x−h)²+k',math:`Sommet = (h,k) = (${h},${k})`}],
+          tip:'Dans f(x)=a(x−h)²+k, le sommet est S(h,k). Attention au signe de h !'}};
+    }
+    if(sub==='fvar'){
+      const a=rand(-3,3)||1,b=rand(-6,6);
+      const croissante=a>0;const type=pick(['type','zero']);
+      if(type==='type'){
+        const correct=croissante?'Croissante sur ℝ':'Décroissante sur ℝ';
+        const w=[croissante?'Décroissante sur ℝ':'Croissante sur ℝ','Croissante sur ℝ⁺','Constante'].filter(v=>v!==correct).slice(0,3);
+        return{text:'Sens de variation de f.',math:`f(x) = ${a===1?'':a===-1?'-':a}x ${b>=0?'+ ':'- '}${Math.abs(b)}`,
+          choices:sh([{v:correct,ok:true},...w.map(v=>({v,ok:false}))]),fmt:v=>v,subtype:'fvar',
+          explain:{answer:correct,steps:[{num:'Coefficient directeur',text:`a = ${a}`,math:a>0?'a>0 → croissante':'a<0 → décroissante'}],
+            tip:'Signe de a = sens de variation. Affine = monotone sur ℝ.'}};
+      }
+      const zero=-b/a;
+      const correct=`x = ${zero}`;
+      const w=[`x = ${zero+1}`,`x = ${zero-1}`,`x = ${-zero}`].filter(v=>v!==correct).slice(0,3);
+      return{text:'Zéro de la fonction.',math:`f(x) = ${a===1?'':a===-1?'-':a}x ${b>=0?'+ ':'- '}${Math.abs(b)}`,
+        choices:sh([{v:correct,ok:true},...w.map(v=>({v,ok:false}))]),fmt:v=>v,subtype:'fvar',
+        explain:{answer:correct,steps:[{num:'f(x)=0',text:'',math:`${a}x+${b}=0 → x=${zero}`}],
+          tip:'Zéro = antécédent de 0. Résoudre f(x)=0.'}};
+    }
+    // inter: intersection de deux droites
+    const a1=rand(-3,3)||1,b1=rand(-5,5),a2=rand(-3,3)||2;
+    if(a1===a2)return genFn();
+    const b2=rand(-5,5);
+    // a1*x+b1 = a2*x+b2 → x=(b2-b1)/(a1-a2)
+    const num=b2-b1,den=a1-a2;
+    if(num%den!==0)return genFn();
+    const xv=num/den,yv=a1*xv+b1;
+    const correct=`(${xv} ; ${yv})`;
+    const w=[`(${xv+1} ; ${yv})`,`(${xv} ; ${yv+1})`,`(${xv-1} ; ${yv-1})`].filter(v=>v!==correct).slice(0,3);
+    return{text:'Intersection de f et g.',math:`f(x)=${a1===1?'':a1}x${b1>=0?'+':''}${b1}\ng(x)=${a2===1?'':a2}x${b2>=0?'+':''}${b2}`,
+      choices:sh([{v:correct,ok:true},...w.map(v=>({v,ok:false}))]),fmt:v=>v,subtype:'inter',
+      explain:{answer:correct,steps:[
+        {num:'f(x)=g(x)',text:'',math:`${a1}x+${b1}=${a2}x+${b2}`},
+        {num:'Résoudre',text:'',math:`x=${xv} → y=${yv}`}],
+        tip:'Point d\'intersection : résoudre f(x)=g(x), puis calculer y.'}};
   }
-  const a=rand(1,4)*(Math.random()<.5?1:-1),b=rand(-5,5);
-  const inc=a>0?'Croissante sur ℝ':'Décroissante sur ℝ';
-  const w=['Croissante sur ℝ','Décroissante sur ℝ','Constante','Non monotone'].filter(v=>v!==inc).slice(0,3);
-  return{text:`f(x)=${a}x${b>=0?'+':''}${b}. Sens de variation ?`,math:'',
-    choices:sh([{v:inc,ok:true},...w.map(v=>({v,ok:false}))]),fmt:v=>v,subtype:'fvar',
-    explain:{answer:inc,steps:[
-      {num:'Règle',text:'f(x)=ax+b : a>0 → croissante, a<0 → décroissante',math:`a=${a} → ${inc}`}],
-      tip:'Fonction affine : le signe de a détermine la variation.'}};
+
+  // difficile
+  const sub=pick(['fsom_std','tangt','minmax']);
+  if(sub==='tangt'||sub==='minmax'){
+    const a=rand(-3,3)||1,b=rand(-6,6),c=rand(-5,5);
+    // f(x) = ax²+bx+c, vertex at x=-b/(2a)
+    const den=2*a;
+    if(den===0)return genFn();
+    const hnum=-b;
+    if(hnum%den!==0)return genFn();
+    const h=hnum/den,k=a*h*h+b*h+c;
+    if(sub==='tangt'){
+      // tangente en x=h : y = k (horizontal tangent at vertex)
+      const correct=`y = ${k}`;
+      const w=[`y = ${k+1}`,`y = ${k-1}`,`y = ${h}`].filter(v=>v!==correct).slice(0,3);
+      const astr=a===1?'':a===-1?'-':String(a);
+      return{text:'Équation de la tangente au sommet.',math:`f(x) = ${astr}x² ${b>=0?'+ ':'- '}${Math.abs(b)}x ${c>=0?'+ ':'- '}${Math.abs(c)}`,
+        choices:sh([{v:correct,ok:true},...w.map(v=>({v,ok:false}))]),fmt:v=>v,subtype:'fsom',
+        explain:{answer:correct,steps:[
+          {num:'Sommet',text:'x_S = −b/2a',math:`x_S = ${h}, y_S = ${k}`},
+          {num:'Tangente au sommet',text:'Toujours horizontale',math:`y = ${k}`}],
+          tip:'Au sommet d\'une parabole, la tangente est horizontale : y = k.'}};
+    }
+    // minmax
+    const correct=a>0?`Minimum ${k} en x=${h}`:`Maximum ${k} en x=${h}`;
+    const w=[a>0?`Maximum ${k} en x=${h}`:`Minimum ${k} en x=${h}`,
+      `${a>0?'Minimum':'Maximum'} ${k+1} en x=${h}`,
+      `${a>0?'Minimum':'Maximum'} ${k} en x=${h+1}`].filter(v=>v!==correct).slice(0,3);
+    const astr=a===1?'':a===-1?'-':String(a);
+    return{text:a>0?'Minimum de f ?':'Maximum de f ?',math:`f(x) = ${astr}x² ${b>=0?'+ ':'- '}${Math.abs(b)}x ${c>=0?'+ ':'- '}${Math.abs(c)}`,
+      choices:sh([{v:correct,ok:true},...w.map(v=>({v,ok:false}))]),fmt:v=>v,subtype:'fsom',
+      explain:{answer:correct,steps:[
+        {num:'Sommet',text:'x_S = −b/(2a)',math:`x_S = ${h}`},
+        {num:'Extremum',text:a>0?'a>0 → minimum':'a<0 → maximum',math:`y_S = ${k}`}],
+        tip:'a>0 : parabole tournée vers le haut → minimum. a<0 : vers le bas → maximum.'}};
+  }
+  // fsom_std
+  const a=rand(-2,2)||1,h=rand(-3,3)||1,k=rand(-5,5);
+  const aexp=a===1?'':a===-1?'-':String(a);
+  const hexp=h>=0?`− ${h}`:`+ ${-h}`;
+  const kexp=k>=0?`+ ${k}`:`- ${Math.abs(k)}`;
+  const correct=`(${h} ; ${k})`;
+  const w=[`(${h+1} ; ${k})`,`(${-h} ; ${k})`,`(${h} ; ${k+1})`].filter(v=>v!==correct).slice(0,3);
+  return{text:'Sommet de la parabole et nature de l\'extremum.',
+    math:`f(x) = ${aexp}(x ${hexp})² ${kexp}`,
+    choices:sh([{v:correct,ok:true},...w.map(v=>({v,ok:false}))]),fmt:v=>`S${v}`,subtype:'fsom',
+    explain:{answer:`S(${h};${k}) — ${a>0?'minimum':'maximum'}`,steps:[
+      {num:'Lecture directe',text:'forme canonique a(x−h)²+k',math:`h=${h}, k=${k}`},
+      {num:'Extremum',text:a>0?'a>0 → minimum global':'a<0 → maximum global',math:`y_min = ${k}`}],
+      tip:'Forme canonique : sommet lisible directement. Signe de a = type d\'extremum.'}};
 }
+
 
 function genGe(){
   const lv=curDiff;
   if(lv==='facile'){
+    const sub=pick(['vec','milieu','dist']);
+    if(sub==='vec'||sub==='milieu'){
+      const ax=rand(-5,5),ay=rand(-5,5),bx=rand(-5,5),by=rand(-5,5);
+      if(sub==='vec'){
+        const vx=bx-ax,vy=by-ay;const correct=`(${vx} ; ${vy})`;
+        const w=[`(${vx+1} ; ${vy})`,`(${vx} ; ${vy+1})`,`(${ax} ; ${ay})`].filter(v=>v!==correct).slice(0,3);
+        return{text:'Calcule le vecteur AB.',math:`A(${ax} ; ${ay}), B(${bx} ; ${by})`,
+          choices:sh([{v:correct,ok:true},...w.map(v=>({v,ok:false}))]),fmt:v=>`AB⃗ = ${v}`,subtype:'vec',
+          explain:{answer:`AB⃗ = (${vx} ; ${vy})`,steps:[
+            {num:'Formule',text:'xB−xA ; yB−yA',math:`(${bx}−${ax} ; ${by}−${ay}) = (${vx} ; ${vy})`}],
+            tip:'Vecteur AB = coordonnées de B MOINS coordonnées de A.'}};
+      }
+      // milieu
+      const mx=(ax+bx)/2,my=(ay+by)/2;
+      const mxs=Number.isInteger(mx)?String(mx):(ax+bx)+'/2';
+      const mys=Number.isInteger(my)?String(my):(ay+by)+'/2';
+      const correct=`(${mx} ; ${my})`;
+      const w=[`(${mx+1} ; ${my})`,`(${mx} ; ${my+1})`,`(${ax} ; ${ay})`].filter(v=>v!==correct).slice(0,3);
+      return{text:'Calcule le milieu de [AB].',math:`A(${ax} ; ${ay}), B(${bx} ; ${by})`,
+        choices:sh([{v:correct,ok:true},...w.map(v=>({v,ok:false}))]),fmt:v=>`M${v}`,subtype:'milieu',
+        explain:{answer:`M(${mx} ; ${my})`,steps:[
+          {num:'Formule',text:'((xA+xB)/2 ; (yA+yB)/2)',math:`((${ax}+${bx})/2 ; (${ay}+${by})/2) = (${mx} ; ${my})`}],
+          tip:'Milieu = moyenne des coordonnées. Ne pas confondre avec le vecteur !'}};
+    }
+    // dist
     const ax=rand(-4,4),ay=rand(-4,4),bx=rand(-4,4),by=rand(-4,4);
-    const cx=ax+bx,cy=ay+by;const correct=`(${cx};${cy})`;
-    const w=[`(${cx+1};${cy})`,`(${cx};${cy+1})`,`(${cx-1};${cy-1})`];
-    return{text:'Calcule les coordonnées de u⃗ + v⃗.',math:`u⃗(${ax};${ay})  v⃗(${bx};${by})`,
-      choices:sh([{v:correct,ok:true},...w.map(v=>({v,ok:false}))]),fmt:v=>v,subtype:'vec',
-      explain:{answer:correct,steps:[
-        {num:'Addition vecteurs',text:'Additionner terme à terme.',math:`(${ax}+${bx};${ay}+${by})=(${cx};${cy})`}],
-        tip:'Vecteurs : additionner les abscisses ensemble et les ordonnées ensemble.'}};
+    const dx=bx-ax,dy=by-ay;const d2=dx*dx+dy*dy;
+    const sqrtD2=Math.round(Math.sqrt(d2)*100)/100;
+    const w=[Math.round((sqrtD2+0.5)*100)/100,Math.round((sqrtD2-0.5)*100)/100,Math.round((sqrtD2+1)*100)/100].filter(v=>v!==sqrtD2&&v>0).slice(0,3);
+    return{text:'Calcule la distance AB.',math:`A(${ax} ; ${ay}), B(${bx} ; ${by})`,
+      choices:sh([{v:sqrtD2,ok:true},...w.map(v=>({v,ok:false}))]),fmt:v=>`AB ≈ ${v}`,subtype:'dist',
+      explain:{answer:`AB ≈ ${sqrtD2}`,steps:[
+        {num:'Formule',text:'√((xB-xA)²+(yB-yA)²)',math:`√(${dx}²+${dy}²) = √${d2} ≈ ${sqrtD2}`}],
+        tip:'Formule de la distance : racine de la somme des carrés des différences.'}};
   }
   if(lv==='moyen'){
-    const x1=rand(-4,4),y1=rand(-4,4),x2=rand(-4,4),y2=rand(-4,4);
-    const d2=(x2-x1)**2+(y2-y1)**2;const dist=Math.round(Math.sqrt(d2)*10)/10;
-    const w=[+(dist+.5).toFixed(1),+(dist-.5).toFixed(1),+(dist+1).toFixed(1)].filter(v=>v>0&&v!==dist).slice(0,3);
-    return{text:'Distance AB (arrondi au dixième).',math:`A(${x1};${y1})  B(${x2};${y2})`,
-      choices:sh([{v:dist,ok:true},...w.map(v=>({v,ok:false}))]),fmt:v=>`AB = ${v}`,subtype:'dist',
-      explain:{answer:`AB = ${dist}`,steps:[
-        {num:'Formule',text:'√[(xB−xA)²+(yB−yA)²]',math:`=√[${(x2-x1)**2}+${(y2-y1)**2}]=√${d2}≈${dist}`}],
-        tip:'Distance = racine de la somme des carrés des différences de coordonnées.'}};
+    const sub=pick(['vec','collin','dist2']);
+    if(sub==='collin'){
+      const ax=rand(-3,3),ay=rand(-3,3),bx=rand(-3,3),by=rand(-3,3);
+      const cx=rand(-3,3),cy=rand(-3,3);
+      // Check collinearity: AB×AC = 0
+      const abx=bx-ax,aby=by-ay,acx=cx-ax,acy=cy-ay;
+      const cross=abx*acy-aby*acx;
+      const areCollinear=(cross===0);
+      const correct=areCollinear?'Oui, colinéaires':'Non, pas colinéaires';
+      const w=[areCollinear?'Non, pas colinéaires':'Oui, colinéaires','Impossible à déterminer','Perpendiculaires'].filter(v=>v!==correct).slice(0,3);
+      return{text:'A, B, C sont-ils alignés ?',math:`A(${ax};${ay}), B(${bx};${by}), C(${cx};${cy})`,
+        choices:sh([{v:correct,ok:true},...w.map(v=>({v,ok:false}))]),fmt:v=>v,subtype:'collin',
+        explain:{answer:correct,steps:[
+          {num:'Vecteurs',text:'',math:`AB⃗=(${abx};${aby}), AC⃗=(${acx};${acy})`},
+          {num:'Produit vectoriel',text:'abx×acy − aby×acx',math:`${abx}×${acy}−${aby}×${acx} = ${cross}`},
+          {num:'Résultat',text:cross===0?'= 0 → colinéaires':'≠ 0 → non colinéaires',math:correct}],
+          tip:'Colinéaires ⟺ déterminant = 0 : xAB×yAC − yAB×xAC = 0'}};
+    }
+    if(sub==='dist2'){
+      const ax=rand(-5,5),ay=rand(-5,5),bx=rand(-5,5),by=rand(-5,5);
+      const dx=bx-ax,dy=by-ay;const d2=dx*dx+dy*dy;const sqrtD2=Math.round(Math.sqrt(d2)*100)/100;
+      const w=[Math.round((sqrtD2+1)*100)/100,Math.round((sqrtD2-1)*100)/100,Math.round((sqrtD2+0.5)*100)/100].filter(v=>v>0&&v!==sqrtD2).slice(0,3);
+      return{text:'Distance exacte ou arrondie.',math:`A(${ax} ; ${ay}), B(${bx} ; ${by})`,
+        choices:sh([{v:sqrtD2,ok:true},...w.map(v=>({v,ok:false}))]),fmt:v=>`AB ≈ ${v}`,subtype:'dist',
+        explain:{answer:`AB ≈ ${sqrtD2}`,steps:[
+          {num:'',text:'',math:`√(${dx}²+${dy}²) = √${d2} ≈ ${sqrtD2}`}],
+          tip:'Distance AB = √((Δx)²+(Δy)²)'}};
+    }
+    // vec moyen: composantes d'un vecteur + norme
+    const ax=rand(-4,4),ay=rand(-4,4),bx=rand(-4,4),by=rand(-4,4);
+    const vx=bx-ax,vy=by-ay;
+    const norm=Math.round(Math.sqrt(vx*vx+vy*vy)*100)/100;
+    const correct=`(${vx} ; ${vy}), ‖AB‖≈${norm}`;
+    const w=[`(${vx+1} ; ${vy}), ‖AB‖≈${norm}`,`(${vx} ; ${vy}), ‖AB‖≈${norm+1}`,`(${-vx} ; ${-vy}), ‖AB‖≈${norm}`].filter(v=>v!==correct).slice(0,3);
+    return{text:'Vecteur AB et sa norme.',math:`A(${ax};${ay}), B(${bx};${by})`,
+      choices:sh([{v:correct,ok:true},...w.map(v=>({v,ok:false}))]),fmt:v=>v,subtype:'vec',
+      explain:{answer:correct,steps:[
+        {num:'Vecteur',text:'',math:`AB⃗=(${vx};${vy})`},
+        {num:'Norme',text:'√(vx²+vy²)',math:`√(${vx*vx}+${vy*vy}) ≈ ${norm}`}],
+        tip:'Norme = longueur du vecteur. Toujours positive.'}};
   }
-  const x1=rand(-3,3),y1=rand(-3,3),m=rand(-3,3)||1;
-  const b2=y1-m*x1;const fmtCoef=(v,base)=>v===1?base:v===-1?'-'+base:`${v}${base}`;
-  const fmtConst=(v)=>v===0?'':v>0?`+${v}`:`${v}`;
-  const eq=`y=${fmtCoef(m,'x')}${fmtConst(b2)}`;
-  const w2=[
-    `y=${fmtCoef(m+1,'x')}${fmtConst(b2)}`,
-    `y=${fmtCoef(m,'x')}${fmtConst(b2+1)}`,
-    `y=${fmtCoef(m-1,'x')}${fmtConst(b2)}`
-  ];
-  return{text:`Droite passant par A(${x1};${y1}), pente m=${m}. Équation ?`,math:'',
-    choices:sh([{v:eq,ok:true},...w2.map(v=>({v,ok:false}))]),fmt:v=>v,subtype:'droite',
-    explain:{answer:eq,steps:[
-      {num:'y=mx+b',text:`m=${m}`,math:`${y1}=${m}×${x1}+b → b=${b2}`},
-      {num:'Équation',text:'',math:eq}],
-      tip:'y=mx+b : m=pente, b=ordonnée à l\'origine. Injecter un point pour trouver b.'}};
+  // difficile: équation de droite
+  const sub=pick(['droite','droite2']);
+  const ax=rand(-4,4),ay=rand(-4,4),bx=rand(-4,4),by=rand(-4,4);
+  if(ax===bx)return genGe();
+  const m=(by-ay)/(bx-ax);
+  if(!Number.isInteger(m))return genGe();
+  const p=ay-m*ax;
+  function fmtCoef(c){return c===1?'':c===-1?'-':String(c);}
+  function fmtConst(c){return c===0?'':c>0?` + ${c}`:` - ${Math.abs(c)}`;}
+  const correct=`y = ${fmtCoef(m)}x${fmtConst(p)}`;
+  const w=[`y = ${fmtCoef(m+1)}x${fmtConst(p)}`,`y = ${fmtCoef(m)}x${fmtConst(p+1)}`,`y = ${fmtCoef(-m)}x${fmtConst(p)}`].filter(v=>v!==correct).slice(0,3);
+  if(sub==='droite2'){
+    // slope only from direction vector
+    const dx=bx-ax,dy=by-ay;
+    const correct2=`y = ${fmtCoef(m)}x${fmtConst(p)}`;
+    return{text:'Équation de la droite (AB).',math:`Direction: (${dx} ; ${dy})\nPasse par A(${ax} ; ${ay})`,
+      choices:sh([{v:correct2,ok:true},...w.map(v=>({v,ok:false}))]),fmt:v=>v,subtype:'droite',
+      explain:{answer:correct2,steps:[
+        {num:'Pente',text:'m = dy/dx',math:`m = ${dy}/${dx} = ${m}`},
+        {num:'Ordonnée',text:`y = ${m}x + p, A(${ax};${ay})`,math:`${ay} = ${m}×${ax}+p → p=${p}`},
+        {num:'Équation',text:'',math:correct2}],
+        tip:'Pente = rapport des composantes du vecteur directeur.'}};
+  }
+  return{text:'Équation de la droite passant par A et B.',math:`A(${ax} ; ${ay}), B(${bx} ; ${by})`,
+    choices:sh([{v:correct,ok:true},...w.map(v=>({v,ok:false}))]),fmt:v=>v,subtype:'droite',
+    explain:{answer:correct,steps:[
+      {num:'Pente',text:'m = (yB−yA)/(xB−xA)',math:`m = ${by-ay}/${bx-ax} = ${m}`},
+      {num:'Ordonnée à l\'origine',text:`y = mx+p avec A`,math:`${ay} = ${m}×${ax}+p → p=${p}`},
+      {num:'Équation',text:'',math:correct}],
+      tip:'Deux points → pente m=(Δy/Δx) → p = y−mx.'}};
 }
+
 
 function genSt(){
   const lv=curDiff;
@@ -937,33 +1173,90 @@ function genSt(){
 function genAl(){
   const lv=curDiff;
   if(lv==='facile'){
-    const a=rand(2,5),b=rand(1,5);const r1=a*a,r2=2*a*b,r3=b*b;
-    const correct=`${r1}x²+${r2}x+${r3}`;
-    const w=[`${r1}x²+${a*b}x+${r3}`,`${r1}x²+${r2}x+${r3+1}`,`${r1+1}x²+${r2}x+${r3}`];
-    return{text:"Développe.",math:`(${a}x+${b})²`,
-      choices:sh([{v:correct,ok:true},...w.map(v=>({v,ok:false}))]),fmt:v=>v,subtype:'dev',
-      explain:{answer:correct,steps:[
-        {num:'(a+b)²=a²+2ab+b²',text:'',math:`${r1}x²+${r2}x+${r3}`}],
-        tip:'3 identités : (a+b)²=a²+2ab+b² · (a-b)²=a²-2ab+b² · (a+b)(a-b)=a²-b²'}};
+    const sub=pick(['dev','dev2','id3']);
+    if(sub==='dev'){
+      const a=rand(1,4),b=rand(1,4);const r1=a*a,r2=2*a*b,r3=b*b;
+      const correct=r1+'x\u00b2 + '+r2+'x + '+r3;
+      const w=[r1+'x\u00b2 + '+(a*b)+'x + '+r3,r1+'x\u00b2 + '+r2+'x + '+(r3+1),(r1+1)+'x\u00b2 + '+r2+'x + '+r3];
+      return{text:'D\u00e9veloppe avec (a+b)\u00b2.',math:'('+a+'x + '+b+')\u00b2',
+        choices:sh([{v:correct,ok:true},...w.map(v=>({v,ok:false}))]),fmt:v=>v,subtype:'dev',
+        explain:{answer:correct,steps:[{num:'(a+b)\u00b2=a\u00b2+2ab+b\u00b2',text:'a='+a+'x, b='+b,math:correct}],
+          tip:'(a+b)\u00b2 = a\u00b2+2ab+b\u00b2. Le terme du milieu = 2\u00d7a\u00d7b !'}};
+    }
+    if(sub==='dev2'){
+      const a=rand(1,4),b=rand(1,4);const r1=a*a,r2=2*a*b,r3=b*b;
+      const correct=r1+'x\u00b2 - '+r2+'x + '+r3;
+      const w=[r1+'x\u00b2 + '+r2+'x + '+r3,r1+'x\u00b2 - '+(a*b)+'x + '+r3,r1+'x\u00b2 - '+r2+'x - '+r3];
+      return{text:'D\u00e9veloppe avec (a\u2212b)\u00b2.',math:'('+a+'x \u2212 '+b+')\u00b2',
+        choices:sh([{v:correct,ok:true},...w.map(v=>({v,ok:false}))]),fmt:v=>v,subtype:'dev',
+        explain:{answer:correct,steps:[{num:'(a\u2212b)\u00b2=a\u00b2\u22122ab+b\u00b2',text:'a='+a+'x, b='+b,math:correct}],
+          tip:'(a\u2212b)\u00b2 = a\u00b2\u22122ab+b\u00b2. Attention : signe MOINS au milieu !'}};
+    }
+    // id3: (a+b)(a-b) = a\u00b2-b\u00b2
+    const a=rand(1,5),b=rand(1,4);const ra=a*a,rb=b*b;
+    const correct=ra+'x\u00b2 - '+rb;
+    const w=[ra+'x\u00b2 + '+rb,(ra+1)+'x\u00b2 - '+rb,ra+'x\u00b2 - '+(rb+1)];
+    return{text:'D\u00e9veloppe avec (a+b)(a\u2212b).',math:'('+a+'x + '+b+')('+a+'x \u2212 '+b+')',
+      choices:sh([{v:correct,ok:true},...w.map(v=>({v,ok:false}))]),fmt:v=>v,subtype:'id3',
+      explain:{answer:correct,steps:[{num:'(a+b)(a\u2212b)=a\u00b2\u2212b\u00b2',text:'a='+a+'x, b='+b,math:ra+'x\u00b2\u2212'+rb}],
+        tip:'Identit\u00e9 3 : (a+b)(a\u2212b) = a\u00b2\u2212b\u00b2. Pas de terme du milieu !'}};
   }
   if(lv==='moyen'){
-    const a=rand(2,6),b=rand(2,8);const correct=`x(${a}x+${b})`;
-    const w=[`${a}x(x+${b})`,`x(${a+1}x+${b})`,`${a}(x²+${b}x)`];
-    return{text:'Factorise.',math:`${a}x²+${b}x`,
-      choices:sh([{v:correct,ok:true},...w.map(v=>({v,ok:false}))]),fmt:v=>v,subtype:'fact',
-      explain:{answer:correct,steps:[
-        {num:'Facteur commun',text:'x est commun aux deux termes.',math:`x(${a}x+${b})`}],
-        tip:'Chercher le facteur commun. Vérifier en redéveloppant.'}};
+    const sub=pick(['fact','fact2','sqrt2']);
+    if(sub==='fact'){
+      const a=rand(2,5),b=rand(1,5);const r1=a*a,r2=2*a*b,r3=b*b;
+      const expr=r1+'x\u00b2 + '+r2+'x + '+r3;
+      const correct='('+a+'x + '+b+')\u00b2';
+      const w=['('+a+'x \u2212 '+b+')\u00b2','('+(a+1)+'x + '+b+')\u00b2','('+a+'x + '+(b+1)+')\u00b2'].filter(v=>v!==correct).slice(0,3);
+      return{text:'Factorise.',math:expr,choices:sh([{v:correct,ok:true},...w.map(v=>({v,ok:false}))]),fmt:v=>v,subtype:'fact',
+        explain:{answer:correct,steps:[{num:'Reconnatre a\u00b2+2ab+b\u00b2',text:'\u221a'+r1+'x\u00b2='+a+'x, \u221a'+r3+'='+b+', 2\u00d7'+a+'\u00d7'+b+'='+r2+' \u2713',math:correct}],
+          tip:'Identit\u00e9 (a+b)\u00b2 : v\u00e9rifier que le terme du milieu = 2ab.'}};
+    }
+    if(sub==='fact2'){
+      const a=rand(2,6),b=rand(1,5);const ra=a*a,rb=b*b;
+      const expr=ra+'x\u00b2 - '+rb;
+      const correct='('+a+'x + '+b+')('+a+'x - '+b+')';
+      const w=['('+a+'x - '+b+')\u00b2','('+a+'x + '+b+')\u00b2','('+(a+1)+'x + '+b+')('+(a+1)+'x - '+b+')'].filter(v=>v!==correct).slice(0,3);
+      return{text:'Factorise (diff\u00e9rence de carr\u00e9s).',math:expr,choices:sh([{v:correct,ok:true},...w.map(v=>({v,ok:false}))]),fmt:v=>v,subtype:'fact',
+        explain:{answer:correct,steps:[{num:'a\u00b2\u2212b\u00b2=(a+b)(a\u2212b)',text:'a='+a+'x, b='+b,math:correct}],
+          tip:'Diff\u00e9rence de deux carr\u00e9s : a\u00b2\u2212b\u00b2 = (a+b)(a\u2212b).'}};
+    }
+    // sqrt2
+    const n=rand(1,6),k=rand(2,5);const val=k*k*n;
+    const correct=k+'\u221a'+n;
+    const w=[(k+1)+'\u221a'+n,k+'\u221a'+(n+1),'\u221a'+val].filter(v=>v!==correct).slice(0,3);
+    return{text:'Simplifie la racine carr\u00e9e.',math:'\u221a'+val,
+      choices:sh([{v:correct,ok:true},...w.map(v=>({v,ok:false}))]),fmt:v=>v,subtype:'sqrt',
+      explain:{answer:correct,steps:[{num:'Factoriser',text:val+'='+k*k+'\u00d7'+n,math:'\u221a('+k*k+'\u00d7'+n+')='+k+'\u221a'+n}],
+        tip:'Cherche le plus grand carr\u00e9 parfait qui divise le nombre.'}};
   }
-  const base=pick([4,9,16,25]);const sqrtVal=Math.round(Math.sqrt(base));
-  if(sqrtVal*sqrtVal!==base)return genAl();
-  const a=rand(2,5);const correct=`${a*sqrtVal}`;
-  const w=[`${a*sqrtVal+1}`,`${sqrtVal}`,`${a*base}`];
-  return{text:'Simplifie.',math:`${a}√${base}`,
-    choices:sh([{v:correct,ok:true},...w.map(v=>({v,ok:false}))]),fmt:v=>v,subtype:'sqrt',
-    explain:{answer:`${a}√${base}=${correct}`,steps:[
-      {num:'Calcul',text:`√${base}=${sqrtVal}`,math:`${a}×${sqrtVal}=${correct}`}],
-      tip:`√(a²)=a. Carrés parfaits : 4,9,16,25,36,49,64,81,100.`}};
+  // difficile
+  const sub=pick(['sqrt_adv','fact_adv','dev3']);
+  if(sub==='sqrt_adv'){
+    const a=rand(1,4),b=rand(1,4);const val=(a+b)*(a+b);
+    const correct=String(a+b);
+    const w=[String(a+b+1),String(a+b-1),String(a*b)].filter(v=>v!==correct&&Number(v)>0).slice(0,3);
+    return{text:'Simplifie.',math:'\u221a'+val,choices:sh([{v:correct,ok:true},...w.map(v=>({v,ok:false}))]),fmt:v=>v,subtype:'sqrt',
+      explain:{answer:correct,steps:[{num:'Carr\u00e9 parfait',text:val+'=('+a+'+'+b+')\u00b2='+val+' \u2713',math:'\u221a'+val+'='+correct}],
+        tip:'Identifier si le nombre est un carr\u00e9 parfait.'}};
+  }
+  if(sub==='fact_adv'){
+    const a=rand(2,5),b=rand(1,4);const r1=a*a,r2=2*a*b,r3=b*b;
+    const sign=pick(['+','-']);const r2s=sign==='+'?r2:r2;
+    const expr=r1+'x\u00b2 '+(sign==='+'?'+ ':'- ')+r2+'x + '+r3;
+    const correct=sign==='+'?'('+a+'x + '+b+')\u00b2':'('+a+'x \u2212 '+b+')\u00b2';
+    const w=[sign==='+'?'('+a+'x \u2212 '+b+')\u00b2':'('+a+'x + '+b+')\u00b2','('+(a+1)+'x + '+b+')\u00b2','('+a+'x + '+(b+1)+')\u00b2'].filter(v=>v!==correct).slice(0,3);
+    return{text:'Factorise compl\u00e8tement.',math:expr,choices:sh([{v:correct,ok:true},...w.map(v=>({v,ok:false}))]),fmt:v=>v,subtype:'fact',
+      explain:{answer:correct,steps:[{num:'Identit\u00e9 remarquable',text:'a\u00b2'+(sign==='+'?'+':'−')+'2ab+b\u00b2=(a'+(sign==='+'?'+':'−')+'b)\u00b2',math:correct}],
+        tip:'V\u00e9rifier les trois conditions : a\u00b2, \u00b12ab, b\u00b2.'}};
+  }
+  // dev3: (a+b)^3
+  const a=rand(1,3),b=rand(1,3);const r1=a*a*a,r2=3*a*a*b,r3=3*a*b*b,r4=b*b*b;
+  const correct=r1+'x\u00b3 + '+r2+'x\u00b2 + '+r3+'x + '+r4;
+  const w=[r1+'x\u00b3 + '+r2+'x\u00b2 + '+r3+'x + '+(r4+1),r1+'x\u00b3 + '+(a*a*b)+'x\u00b2 + '+r3+'x + '+r4,(r1+1)+'x\u00b3 + '+r2+'x\u00b2 + '+r3+'x + '+r4];
+  return{text:'D\u00e9veloppe (a+b)\u00b3.',math:'('+a+'x + '+b+')\u00b3',choices:sh([{v:correct,ok:true},...w.map(v=>({v,ok:false}))]),fmt:v=>v,subtype:'dev',
+    explain:{answer:correct,steps:[{num:'(a+b)\u00b3=a\u00b3+3a\u00b2b+3ab\u00b2+b\u00b3',text:'a='+a+'x, b='+b,math:correct}],
+      tip:'Coefficients 1,3,3,1. Puissances d\u00e9croissantes de a.'}};
 }
 
 const GENS={eq:genEq,fn:genFn,ge:genGe,st:genSt,al:genAl};
@@ -1054,7 +1347,7 @@ function showBonusCard(){
   } else rw.style.display='none';
   document.getElementById('bonus-ol').classList.add('show');
 }
-function closeBonusCard(){document.getElementById('bonus-ol').classList.remove('show');document.getElementById('nxt-btn').classList.add('on');}
+function closeBonusCard(){document.getElementById('bonus-ol').classList.remove('show');nextQ();}
 
 function doWrong(q,timeout=false){
   streak=0;document.getElementById('s-streak').textContent=0;
@@ -1072,6 +1365,15 @@ function doWrong(q,timeout=false){
 }
 
 const EXPL_LINKS={
+  collin:{label:'Alignement de points — Khan Academy 🇫🇷',url:'https://fr.khanacademy.org/math/geometry/hs-geo-analytic-geometry/hs-geo-collinear-points/v/collinear-points'},
+  milieu:{label:'Milieu d\'un segment — Khan Academy 🇫🇷',url:'https://fr.khanacademy.org/math/basic-geo/basic-geo-coord-plane/coordinate-plane-4-quad/v/midpoint-formula'},
+  eq1b:{label:'Équations avec parenthèses — Khan Academy 🇫🇷',url:'https://fr.khanacademy.org/math/3eme-annee-secondaire/xd903d14ae2b1276e:algebre/xd903d14ae2b1276e:equations-ou-linconnue-est-dans-les-deux-membres/v/equations-with-variables-on-both-sides'},
+  eq1c:{label:'Résoudre x² = n — Khan Academy 🇫🇷',url:'https://fr.khanacademy.org/math/algebra/x2f8bb11595b61c86:quadratic-equations-inequalities/x2f8bb11595b61c86:solving-quadratics-square-roots/v/simple-quadratic-equation'},
+  eq_frac:{label:'Produit en croix — Khan Academy 🇫🇷',url:'https://fr.khanacademy.org/math/arithmetic/arith-review-fractions/arith-review-cross-multiply/v/cross-multiplying'},
+  ineq1:{label:'Inéquations — Khan Academy 🇫🇷',url:'https://fr.khanacademy.org/math/algebra/x2f8bb11595b61c86:inequalities-systems/x2f8bb11595b61c86:one-variable-inequalities/v/inequalities-using-addition-and-subtraction'},
+  inter:{label:'Intersection de droites — YouTube 🇫🇷',url:'https://www.youtube.com/results?search_query=intersection+deux+droites+seconde+math'},
+  sign:{label:'Signe d\'une fonction affine — Khan Academy 🇫🇷',url:'https://fr.khanacademy.org/math/algebra/x2f8bb11595b61c86:linear-equations-graphs/x2f8bb11595b61c86:linear-equations-word-problems/v/linear-equation-word-problems'},
+  id3:{label:'Identité (a+b)(a-b) — Khan Academy 🇫🇷',url:'https://fr.khanacademy.org/math/algebra/x2f8bb11595b61c86:polynomial-arithmetic/x2f8bb11595b61c86:multiplying-binomials/v/more-examples-of-special-products'},
   eq1:{label:'Équation 1er degré — Khan Academy 🇫🇷',url:'https://fr.khanacademy.org/math/3eme-annee-secondaire/xd903d14ae2b1276e:algebre/xd903d14ae2b1276e:equations-ou-linconnue-est-dans-les-deux-membres/e/variables-on-both-sides-rational'},
   eq2:{label:'Discriminant 2nd degré — Khan Academy 🇫🇷',url:'https://fr.khanacademy.org/math/fr-v2-premiere-s/x67ebdaa4f3e116cf:algebre-equations-du-second-degre/x67ebdaa4f3e116cf:fr-v2-rsoudre-une-quation-du-second-degr-en-utilisant-la-formule/a/discriminant-review'},
   syst:{label:'Systèmes d\'équations — Khan Academy 🇫🇷',url:'https://fr.khanacademy.org/math/fr-v2-seconde-s/x16338c0e47eff42b:geometrie-droites-et-systemes-d-equations/x16338c0e47eff42b:resolution-d-un-systeme-par-addition-ou-combinaison/v/solving-systems-of-equations-by-elimination'},
@@ -1201,6 +1503,27 @@ function endGame(){
   show('result');
 }
 
+function updateWalletUI(){
+  const total=totalEarned;
+  const el=document.getElementById('w-total');
+  if(el) el.textContent=total.toFixed(2)+'€';
+  const fill=document.getElementById('w-prog-fill');
+  if(fill) fill.style.width=Math.min(total/5*100,100)+'%';
+  const lbl=document.getElementById('w-prog-label');
+  if(lbl) lbl.textContent=total.toFixed(2)+'€ / 5€';
+  const btn=document.getElementById('w-coupon-btn');
+  if(btn) btn.disabled=(total<5);
+  const hist=document.getElementById('w-history');
+  if(hist){
+    hist.innerHTML='';
+    coupons.slice().reverse().forEach(c=>{
+      const d=document.createElement('div');
+      d.className='w-hist-item';
+      d.innerHTML='<span>'+( c.type==='speed'?'⚡ Bonus rapide':'🏆 Récompense')+'</span><span>+'+c.amount+'€</span>';
+      hist.appendChild(d);
+    });
+  }
+}
 function openWallet(){updateWalletUI();document.getElementById('wallet-modal-ol').classList.add('show');}
 function closeWallet(){document.getElementById('wallet-modal-ol').classList.remove('show');}
 function useCoupon(){
