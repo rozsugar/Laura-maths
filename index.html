@@ -1505,6 +1505,8 @@ function endGame(){
 
 function updateWalletUI(){
   const total=totalEarned;
+  const wtxt=document.getElementById('wallet-txt');
+  if(wtxt) wtxt.textContent=total.toFixed(2)+'€';
   const el=document.getElementById('w-total');
   if(el) el.textContent=total.toFixed(2)+'€';
   const fill=document.getElementById('w-prog-fill');
